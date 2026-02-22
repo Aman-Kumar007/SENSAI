@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form"; // ✅ useWatch added
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
 import {
   Card,
   CardContent,
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import useFetch from "@/hooks/use-fetch";
 import { onboardingSchema } from "@/app/lib/schema";
 import { updateUser } from "@/actions/user";
@@ -33,10 +35,10 @@ import { updateUser } from "@/actions/user";
 const OnboardingForm = ({ industries, initialData = null }) => {
   const router = useRouter();
 
-  // Helper to find the industry object from the string "Tech-software-engineering"
+  // Helper to find initial industry
   const getInitialIndustry = () => {
     if (!initialData?.industry) return null;
-    const firstPart = initialData.industry.split("-")[0]; // Extract "Tech"
+    const firstPart = initialData.industry.split("-")[0];
     return industries.find((ind) => ind.id === firstPart) || null;
   };
 
@@ -53,19 +55,30 @@ const OnboardingForm = ({ industries, initialData = null }) => {
     handleSubmit,
     formState: { errors },
     setValue,
-    watch,
+    control, // ✅ required for useWatch
   } = useForm({
     resolver: zodResolver(onboardingSchema),
-    // Pre-fill values if editing
     defaultValues: {
-      industry: initialData?.industry ? initialData.industry.split("-")[0] : "",
+      industry: initialData?.industry
+        ? initialData.industry.split("-")[0]
+        : "",
       subIndustry: initialData?.industry
-        ? initialData.industry.split("-").slice(1).join(" ").replace(/-/g, " ")
+        ? initialData.industry
+            .split("-")
+            .slice(1)
+            .join(" ")
+            .replace(/-/g, " ")
         : "",
       experience: initialData?.experience?.toString() || "",
       skills: initialData?.skills ? initialData.skills.join(", ") : "",
       bio: initialData?.bio || "",
     },
+  });
+
+  // ✅ FIXED: useWatch instead of watch
+  const watchIndustry = useWatch({
+    control,
+    name: "industry",
   });
 
   const onSubmit = async (values) => {
@@ -80,6 +93,7 @@ const OnboardingForm = ({ industries, initialData = null }) => {
       });
     } catch (error) {
       console.error("Onboarding error:", error);
+      toast.error("Something went wrong");
     }
   };
 
@@ -90,8 +104,6 @@ const OnboardingForm = ({ industries, initialData = null }) => {
       router.refresh();
     }
   }, [updateResult, updateLoading, initialData, router]);
-
-  const watchIndustry = watch("industry");
 
   return (
     <div className="flex items-center justify-center bg-background">
@@ -106,16 +118,17 @@ const OnboardingForm = ({ industries, initialData = null }) => {
               : "Select your industry to get personalized career insights and recommendations."}
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Industry */}
             <div className="space-y-2">
               <Label htmlFor="industry">Industry</Label>
               <Select
                 onValueChange={(value) => {
                   setValue("industry", value);
-                  setSelectedIndustry(
-                    industries.find((ind) => ind.id === value)
-                  );
+                  const selected = industries.find((ind) => ind.id === value);
+                  setSelectedIndustry(selected);
                   setValue("subIndustry", "");
                 }}
                 defaultValue={
@@ -138,6 +151,7 @@ const OnboardingForm = ({ industries, initialData = null }) => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
+
               {errors.industry && (
                 <p className="text-sm text-red-500">
                   {errors.industry.message}
@@ -145,6 +159,7 @@ const OnboardingForm = ({ industries, initialData = null }) => {
               )}
             </div>
 
+            {/* Sub Industry */}
             {(watchIndustry || selectedIndustry) && (
               <div className="space-y-2">
                 <Label htmlFor="subIndustry">Specialization</Label>
@@ -152,13 +167,18 @@ const OnboardingForm = ({ industries, initialData = null }) => {
                   onValueChange={(value) => setValue("subIndustry", value)}
                   defaultValue={
                     initialData?.industry
-                      ? initialData.industry.split("-").slice(1).join(" ").replace(/-/g, " ")
+                      ? initialData.industry
+                          .split("-")
+                          .slice(1)
+                          .join(" ")
+                          .replace(/-/g, " ")
                       : undefined
                   }
                 >
                   <SelectTrigger id="subIndustry">
                     <SelectValue placeholder="Select your specialization" />
                   </SelectTrigger>
+
                   <SelectContent>
                     <SelectGroup>
                       <SelectLabel>Specializations</SelectLabel>
@@ -170,6 +190,7 @@ const OnboardingForm = ({ industries, initialData = null }) => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+
                 {errors.subIndustry && (
                   <p className="text-sm text-red-500">
                     {errors.subIndustry.message}
@@ -178,6 +199,7 @@ const OnboardingForm = ({ industries, initialData = null }) => {
               </div>
             )}
 
+            {/* Experience */}
             <div className="space-y-2">
               <Label htmlFor="experience">Years of Experience</Label>
               <Input
@@ -195,6 +217,7 @@ const OnboardingForm = ({ industries, initialData = null }) => {
               )}
             </div>
 
+            {/* Skills */}
             <div className="space-y-2">
               <Label htmlFor="skills">Skills</Label>
               <Input
@@ -206,10 +229,13 @@ const OnboardingForm = ({ industries, initialData = null }) => {
                 Separate multiple skills with commas
               </p>
               {errors.skills && (
-                <p className="text-sm text-red-500">{errors.skills.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.skills.message}
+                </p>
               )}
             </div>
 
+            {/* Bio */}
             <div className="space-y-2">
               <Label htmlFor="bio">Professional Bio</Label>
               <Textarea
@@ -223,14 +249,17 @@ const OnboardingForm = ({ industries, initialData = null }) => {
               )}
             </div>
 
+            {/* Submit */}
             <Button type="submit" className="w-full" disabled={updateLoading}>
               {updateLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
+              ) : initialData ? (
+                "Update Profile"
               ) : (
-                initialData ? "Update Profile" : "Complete Profile"
+                "Complete Profile"
               )}
             </Button>
           </form>

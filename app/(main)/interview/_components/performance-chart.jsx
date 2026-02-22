@@ -16,20 +16,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 
 export default function PerformanceChart({ assessments }) {
-  const [chartData, setChartData] = useState([]);
+  // ✅ Derived state using useMemo (FIXED)
+  const chartData = useMemo(() => {
+    if (!assessments) return [];
 
-  useEffect(() => {
-    if (assessments) {
-      const formattedData = assessments.map((assessment) => ({
-        date: format(new Date(assessment.createdAt), "MMM dd"),
-        score: assessment.quizScore,
-      }));
-      setChartData(formattedData);
-    }
+    return assessments.map((assessment) => ({
+      date: format(new Date(assessment.createdAt), "MMM dd"),
+      score: assessment.quizScore,
+    }));
   }, [assessments]);
 
   return (
@@ -40,6 +38,7 @@ export default function PerformanceChart({ assessments }) {
         </CardTitle>
         <CardDescription>Your quiz scores over time</CardDescription>
       </CardHeader>
+
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -47,6 +46,7 @@ export default function PerformanceChart({ assessments }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis domain={[0, 100]} />
+
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload?.length) {
@@ -64,6 +64,7 @@ export default function PerformanceChart({ assessments }) {
                   return null;
                 }}
               />
+
               <Line
                 type="monotone"
                 dataKey="score"

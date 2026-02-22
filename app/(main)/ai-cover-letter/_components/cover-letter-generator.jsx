@@ -62,7 +62,7 @@ export default function CoverLetterGenerator() {
         <CardHeader>
           <CardTitle>Job Details</CardTitle>
           <CardDescription>
-            Provide information about the position you're applying for
+                 {"Provide information about the position you're applying for"}
           </CardDescription>
         </CardHeader>
         <CardContent>
